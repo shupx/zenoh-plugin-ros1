@@ -26,7 +26,7 @@ use tokio::task::JoinHandle;
 use zenoh::{
     internal::{
         plugins::{RunningPlugin, RunningPluginTrait, ZenohPlugin},
-        runtime::Runtime,
+        runtime::DynamicRuntime,
     },
     Result as ZResult,
 };
@@ -107,7 +107,7 @@ zenoh_plugin_trait::declare_plugin!(Ros1Plugin);
 
 impl ZenohPlugin for Ros1Plugin {}
 impl Plugin for Ros1Plugin {
-    type StartArgs = Runtime;
+    type StartArgs = DynamicRuntime;
     type Instance = RunningPlugin;
 
     // A mandatory const to define, in case of the plugin is built as a standalone executable
@@ -123,10 +123,8 @@ impl Plugin for Ros1Plugin {
         zenoh::try_init_log_from_env();
         tracing::debug!("ROS1 plugin {}", Ros1Plugin::PLUGIN_LONG_VERSION);
 
-        let config = runtime.config().lock();
-        let self_cfg = config
-            .plugin(name)
-            .ok_or("No plugin in the config!")?
+        let self_cfg_val = runtime.get_config().get_plugin_config(name)?;
+        let self_cfg = self_cfg_val
             .as_object()
             .ok_or("Unable to get cfg objet!")?;
         tracing::info!("ROS1 config: {:?}", self_cfg);
@@ -142,8 +140,6 @@ impl Plugin for Ros1Plugin {
         // Setup the thread numbers
         WORK_THREAD_NUM.store(Environment::work_thread_num().get(), Ordering::SeqCst);
         MAX_BLOCK_THREAD_NUM.store(Environment::max_block_thread_num().get(), Ordering::SeqCst);
-
-        drop(config);
 
         // return a RunningPlugin to zenohd
         Ok(Box::new(Ros1PluginInstance::new(runtime)?))
@@ -164,7 +160,7 @@ impl Drop for Ros1PluginInstance {
     }
 }
 impl Ros1PluginInstance {
-    fn new(runtime: &Runtime) -> ZResult<Self> {
+    fn new(runtime: &DynamicRuntime) -> ZResult<Self> {
         let bridge: ZResult<Ros1ToZenohBridge> = blockon_runtime(async {
             if Environment::with_rosmaster().get() {
                 Ros1MasterCtrl::with_ros1_master().await?;
