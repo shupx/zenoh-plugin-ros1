@@ -55,7 +55,12 @@ where
     }
 
     pub fn set(&self, value: Tvar) {
-        std::env::set_var(self.name, value.to_string());
+        // Safety: this helper is used for process-level configuration updates.
+        // Callers must ensure no concurrent environment access that would violate
+        // the contract of `std::env::set_var` on newer Rust versions.
+        unsafe {
+            std::env::set_var(self.name, value.to_string());
+        }
     }
 }
 

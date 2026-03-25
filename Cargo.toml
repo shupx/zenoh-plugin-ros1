@@ -12,7 +12,7 @@
 #   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
 #
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["zenoh-bridge-ros1", "zenoh-plugin-ros1", "rosrust/rosrust"]
 exclude = ["rosrust"]
 
@@ -22,7 +22,7 @@ authors = [
   "Dmitrii Bannov <dmitrii.bannov@zettascale.tech>",
   "Luca Cominardi <luca@zettascale.tech>",
 ]
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/eclipse-zenoh/zenoh-plugin-ros1"
 homepage = "http://zenoh.io"
 license = " EPL-2.0 OR Apache-2.0"
