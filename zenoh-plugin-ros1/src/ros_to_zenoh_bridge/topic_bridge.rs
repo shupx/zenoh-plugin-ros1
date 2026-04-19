@@ -14,7 +14,7 @@
 
 use std::{fmt::Display, sync::Arc};
 
-use tracing::error;
+use tracing::{error, warn};
 
 use super::{
     abstract_bridge::AbstractBridge,
@@ -97,6 +97,10 @@ impl TopicBridge {
         self.required_on_ros1_side || self.required_on_zenoh_side
     }
 
+    pub fn is_present_in_ros1(&self) -> bool {
+        self.required_on_ros1_side
+    }
+
     //PRIVATE:
     async fn recalc_state(&mut self) {
         self.recalc_declaration().await;
@@ -106,6 +110,14 @@ impl TopicBridge {
     async fn recalc_declaration(&mut self) {
         match (self.required_on_ros1_side, &self.declaration) {
             (true, None) => {
+                if !self.topic.is_fully_resolved() {
+                    warn!(
+                        "{self}: skipping discovery declaration for unresolved topic descriptor (datatype='{}', md5='{}')",
+                        self.topic.datatype, self.topic.md5
+                    );
+                    return;
+                }
+
                 match self
                     .declaration_interface
                     .declare_with_type(&self.topic, self.b_type)
@@ -140,6 +152,15 @@ impl TopicBridge {
     }
 
     async fn create_bridge(&mut self) {
+        if !self.topic.is_fully_resolved() {
+            warn!(
+                "{self}: skipping bridge creation for unresolved topic descriptor (datatype='{}', md5='{}')",
+                self.topic.datatype, self.topic.md5
+            );
+            self.bridge = None;
+            return;
+        }
+
         match AbstractBridge::new(
             self.b_type,
             &self.topic,

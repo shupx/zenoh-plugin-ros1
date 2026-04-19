@@ -17,6 +17,8 @@ use std::{
     sync::Arc,
 };
 
+use tracing::warn;
+
 use super::{
     bridge_type::BridgeType,
     bridging_mode::{bridging_mode, BridgingMode},
@@ -143,10 +145,35 @@ impl<'a> ComplementaryElementAccessor<'a> {
     }
 
     pub async fn complementary_entity_discovered(&mut self, topic: TopicDescriptor) {
+        if !topic.is_fully_resolved() {
+            warn!(
+                "Ignoring remote discovery for unresolved topic {} with datatype '{}' and md5 '{}'",
+                topic.name, topic.datatype, topic.md5
+            );
+            return;
+        }
+
+        let local_presence_from_unresolved_topic = self
+            .access
+            .container
+            .keys()
+            .find(|candidate| candidate.name == topic.name && !candidate.is_fully_resolved())
+            .cloned()
+            .and_then(|key| {
+                self.access
+                    .container
+                    .remove(&key)
+                    .map(|bridge| bridge.is_present_in_ros1())
+            })
+            .unwrap_or(false);
+
         let b_mode = bridging_mode(self.access.b_type, topic.name.as_str());
         if b_mode != BridgingMode::Disabled {
             match self.access.container.entry(topic) {
                 Entry::Occupied(mut val) => {
+                    if local_presence_from_unresolved_topic {
+                        val.get_mut().set_present_in_ros1(true).await;
+                    }
                     val.get_mut().set_has_complementary_in_zenoh(true).await;
                 }
                 Entry::Vacant(val) => {
@@ -159,6 +186,9 @@ impl<'a> ComplementaryElementAccessor<'a> {
                         self.access.zenoh_client.clone(),
                         b_mode,
                     ));
+                    if local_presence_from_unresolved_topic {
+                        inserted.set_present_in_ros1(true).await;
+                    }
                     inserted.set_has_complementary_in_zenoh(true).await;
                 }
             }
@@ -198,7 +228,7 @@ impl<'a> ElementAccessor<'a> {
         // As a result of this cycle, part_of_ros_state will contain only new topics that doesn't have corresponding bridge.
         for (topic, bridge) in self.access.container.iter_mut() {
             smth_changed |= bridge
-                .set_present_in_ros1(part_of_ros_state.take(topic).is_some())
+                .set_present_in_ros1(Self::take_ros1_presence(part_of_ros_state, topic))
                 .await;
         }
 
@@ -235,6 +265,24 @@ impl<'a> ElementAccessor<'a> {
             }
         }
         smth_changed
+    }
+
+    fn take_ros1_presence(
+        part_of_ros_state: &mut HashSet<TopicDescriptor>,
+        topic: &TopicDescriptor,
+    ) -> bool {
+        if part_of_ros_state.take(topic).is_some() {
+            return true;
+        }
+
+        let unresolved_same_name = part_of_ros_state
+            .iter()
+            .find(|candidate| candidate.name == topic.name && !candidate.is_fully_resolved())
+            .cloned();
+
+        unresolved_same_name
+            .and_then(|candidate| part_of_ros_state.take(&candidate))
+            .is_some()
     }
 }
 

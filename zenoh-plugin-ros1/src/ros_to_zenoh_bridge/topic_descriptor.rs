@@ -20,3 +20,9 @@ pub struct TopicDescriptor {
     pub datatype: DataType,
     pub md5: Md5,
 }
+
+impl TopicDescriptor {
+    pub fn is_fully_resolved(&self) -> bool {
+        self.datatype != "*" && self.md5 != "*"
+    }
+}
