@@ -20,6 +20,8 @@ Check the website [zenoh.io](http://zenoh.io) and the [roadmap](https://github.c
 
 # ROS1 to Zenoh Bridge plugin
 
+> Note: Since this plugin is not maintained by the zenoh team since 1.0.0-dev-83-g2b1cfac, Peixuan Shu continues to maintain it in his forked repository to keep it compatible with the latest zenoh releases. The build instructions are at [README_build.md](README_build.md) and the build artifacts are published at [https://github.com/shupx/zenoh-plugin-ros1/releases/tag/nightly](https://github.com/shupx/zenoh-plugin-ros1/releases/tag/nightly).
+
 :point_right: **Install latest release:** see [below](#how-to-install-it)
 
 :point_right: **Docker image:** see [below](#docker-image)

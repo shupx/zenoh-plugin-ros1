@@ -44,3 +44,7 @@ cargo update
 2. Change the rust version in `rust-toolchain.toml` to be aligned with that in `zenoh` repository.
 3. Run `cargo update` or `cargo update -p zenoh` to update the `Cargo.lock`.
 4. Run `cargo build --release` to build this project with the rust version specified in `rust-toolchain.toml`.
+
+## Build with docker
+
+For CI build, a docker image is used to pre-fetch Cargo registry and Git dependencies for `zenoh-plugin-ros1` to speed up the build. Refer to [docker_dev_instruction/README.md](docker_dev_instruction/README.md) for details.
